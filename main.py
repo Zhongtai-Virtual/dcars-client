@@ -74,9 +74,8 @@ def export_airframe(db: dict, airframe: dict):
     # reserve the last five
     states_to_be_cleaned = states_to_be_cleaned[:-5]
     if states_to_be_cleaned:
-        print(f"Removing outdated states that are not marked as local-only: {
-            [state["name"] for state in states_to_be_cleaned]
-        }")
+        local_only = [state["name"] for state in states_to_be_cleaned]
+        print(f"Removing outdated states that are not marked as local-only: {local_only}")
         input("Press [enter] to proceed")
     # clean from fs
     for state_to_be_cleaned in states_to_be_cleaned:
