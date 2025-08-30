@@ -10,9 +10,9 @@ jobs:
       - name: Create Executable
         uses: sayyid5416/pyinstaller@v1
         with:
-          spec: 'main.spec'
+          spec: 'dcars-client.spec'
           upload_exe_with_name: "dcars-client-lin_x86-64"
-          options: --name "dcars-client"
+          options:
 
   build-windows:
     runs-on: windows-latest
@@ -20,6 +20,6 @@ jobs:
       - name: Create Executable
         uses: sayyid5416/pyinstaller@v1
         with:
-          spec: 'main.spec'
+          spec: 'dcars-client.spec'
           upload_exe_with_name: "dcars-client-win_x86-64"
-          options: --name "dcars-client"
+          options: 
