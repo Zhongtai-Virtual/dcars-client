@@ -11,7 +11,7 @@ jobs:
         uses: sayyid5416/pyinstaller@v1
         with:
           spec: 'main.spec'
-          upload_exe_with_name: "dcars-client-$GITHUB_SHA"
+          upload_exe_with_name: "dcars-client-lin_x86-64"
           options: --name "dcars-client"
 
   build-windows:
@@ -21,5 +21,5 @@ jobs:
         uses: sayyid5416/pyinstaller@v1
         with:
           spec: 'main.spec'
-          upload_exe_with_name: "dcars-client-$GITHUB_SHA"
+          upload_exe_with_name: "dcars-client-win_x86-64"
           options: --name "dcars-client"
