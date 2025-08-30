@@ -1,5 +1,6 @@
 import os
 import io
+import sys
 import shutil
 import tempfile
 import tarfile
@@ -19,7 +20,7 @@ try:
     aircrafts_to_be_synced = config['sync']['regs'].split(",")
 except KeyError:
     print("Invalid config.")
-    exit(1)
+    sys.exit(1)
 
 airframes_path = os.path.join(simulator_path, "Output", "CL650", "airframes")
 airframe_db_path = os.path.join(airframes_path, "airframe.db")
@@ -201,4 +202,4 @@ if __name__ == "__main__":
         import_save(db)
     else:
         print("Invalid input")
-        exit(1)
+        sys.exit(1)
