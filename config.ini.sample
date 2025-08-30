@@ -1,0 +1,9 @@
+[simulator]
+path = XP12 folder
+
+[sync]
+path = syncing folder
+; comma delimited list of registration
+; numbers for the aircrafts to be synced
+; e.g. B-603L,B-604L
+regs = B-603L
