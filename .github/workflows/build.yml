@@ -4,15 +4,22 @@ on:
     - main
 
 jobs:
-  pyinstaller-build:
-    runs-on: 
-    - ubuntu-latest
-    - windows-latest
-    - macos-latest
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - name: Create Executable
         uses: sayyid5416/pyinstaller@v1
         with:
           spec: 'main.spec'
           upload_exe_with_name: "dcars-client-$GITHUB_SHA"
-          options: --onefile, --name "dcars-client"
+          options: --name "dcars-client"
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Create Executable
+        uses: sayyid5416/pyinstaller@v1
+        with:
+          spec: 'main.spec'
+          upload_exe_with_name: "dcars-client-$GITHUB_SHA"
+          options: --name "dcars-client"
