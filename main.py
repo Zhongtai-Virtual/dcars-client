@@ -9,10 +9,9 @@ import pathlib
 import configparser
 
 script_dir = pathlib.Path(__file__).parent.absolute()
-config_file_path = script_dir / "config.ini"
+config_file_path = os.path.join(script_dir, "config.ini")
 config = configparser.ConfigParser()
 config.read(config_file_path)
-
 
 try:
     simulator_path = config['simulator']['path']
