@@ -122,6 +122,12 @@ def export_airframe(db: dict, airframe: dict):
             name = state["name"]
             state_path=os.path.join(airframe_states_path, name)
             tar.add(state_path, arcname=os.path.join("states", name))
+        
+        # import NVRAM
+        avionics_nvram_path = os.path.join(airframes_path, "avionics", "nvram")
+        tar.add(avionics_nvram_path, arcname=os.path.join("avionics", "nvram"))
+        abus_nvram_path = os.path.join(airframes_path, "abus", "nvram")
+        tar.add(abus_nvram_path, arcname=os.path.join("abus", "nvram"))
     finally: 
         # make sure file is saved
         tar.close()
@@ -179,7 +185,7 @@ def import_airframe(local_db: dict, tar_path: str):
         # move states
         subdir_and_files = [
             tarinfo for tarinfo in tar.getmembers()
-            if tarinfo.name.startswith("states/")
+            if tarinfo.name != ("airframe.diff")
         ]
         tar.extractall(members=subdir_and_files, filter='data', path=airframe_path)
 
