@@ -4,6 +4,7 @@ import sys
 import shutil
 import tempfile
 import tarfile
+import time
 import copy
 import pathlib
 import configparser
@@ -103,7 +104,9 @@ def export_airframe(db: dict, airframe: dict):
 
     # export states to be shared
     try:
-        aircraft_file = os.path.join(sync_path, f"{reg}.tar")
+        reg_path = os.path.join(sync_path, reg)
+        os.makedirs(reg_path, exist_ok=True) 
+        aircraft_file = os.path.join(reg_path, f"{int(time.time())}.tar")
         tar = tarfile.open(aircraft_file, "w")
         # add db
         db_bin = bytes(serialize(shared_airframe), "utf-8")
@@ -180,15 +183,15 @@ def import_airframe(local_db: dict, tar_path: str):
         tar.extractall(members=subdir_and_files, filter='data', path=airframe_path)
 
 def import_save(local_db: dict):
-    def check_filename(filename):
-        (base, ext) = os.path.splitext(filename)
-        return ext == ".tar" and base in aircrafts_to_be_synced
-    tar_paths = [
-        os.path.join(sync_path, filename)
+    def get_latest(reg_path):
+        sorted_files = sorted(os.listdir(reg_path))
+        return os.path.join(reg_path, sorted_files[-1])
+    reg_paths = [
+        get_latest(os.path.join(sync_path, filename))
         for filename in os.listdir(sync_path)
-        if check_filename(filename)
+        if filename in aircrafts_to_be_synced
     ]
-    for tar_path in tar_paths:
+    for tar_path in reg_paths:
         import_airframe(local_db, tar_path)
     
 if __name__ == "__main__":
