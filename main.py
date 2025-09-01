@@ -20,6 +20,7 @@ try:
     aircrafts_to_be_synced = config['sync']['regs'].split(",")
 except KeyError:
     print("Invalid config.")
+    input()
     sys.exit(1)
 
 airframes_path = os.path.join(simulator_path, "Output", "CL650", "airframes")
@@ -204,4 +205,5 @@ if __name__ == "__main__":
         import_save(db)
     else:
         print("Invalid input")
+        input()
         sys.exit(1)
