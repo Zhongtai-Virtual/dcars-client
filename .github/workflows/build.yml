@@ -25,3 +25,14 @@ jobs:
           python_ver: '3.13'
           upload_exe_with_name: "dcars-client-win_x86-64"
           options: 
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Create Executable
+        uses: sayyid5416/pyinstaller@v1
+        with:
+          spec: 'dcars-client.spec'
+          python_ver: '3.13'
+          upload_exe_with_name: "dcars-client-macos_aarch64"
+          options: 
