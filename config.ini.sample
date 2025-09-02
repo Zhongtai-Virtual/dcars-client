@@ -2,7 +2,7 @@
 path = XP12 folder
 
 [sync]
-path = syncing folder
+path = [Nextcloud syncing path]/MZT
 ; comma delimited list of registration
 ; numbers for the aircrafts to be synced
 ; e.g. B-603L,B-604L
