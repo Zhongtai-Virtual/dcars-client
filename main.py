@@ -8,6 +8,7 @@ import time
 import copy
 import pathlib
 import configparser
+import json
 
 script_dir = pathlib.Path(__file__).parent.absolute()
 config_file_path = os.path.join(script_dir, "config.ini")
@@ -23,19 +24,39 @@ except KeyError:
     input()
     sys.exit(1)
 
+db_diff_filename = "airframe.diff"
 airframes_path = os.path.join(simulator_path, "Output", "CL650", "airframes")
 airframe_db_path = os.path.join(airframes_path, "airframe.db")
 aircraft_FDR_path = os.path.join(simulator_path, "Output", "CL650", "FDR")
 stable_approach_reports_path = os.path.join(simulator_path, "Output", "preferences", "StableApproach", "reports")
-db_diff_filename = "airframe.diff"
+
+sync_airframes_path = os.path.join(sync_path, "airframes")
+sync_fdr_path = os.path.join(sync_path, "records", "FDR")
+sync_stableapproach_path = os.path.join(sync_path, "records", "StableApproach")
 
 def export_FDR():
-    # TODO:
-    return
+    fdr_export_path = os.path.join(sync_fdr_path, f"{int(time.time())}.tar")
+    with tarfile.open(fdr_export_path, 'w') as tar:
+        tar.add(aircraft_FDR_path, arcname="")
 
 def export_stableapproach():
-    # TODO:
-    return
+    if not os.path.isdir(stable_approach_reports_path):
+        print("Stable Approach not installed")
+        return
+    reports = [
+        os.path.join(stable_approach_reports_path, r)
+        for r in os.listdir(stable_approach_reports_path)
+    ]
+    latest_path = max(reports, key=os.path.getctime)
+    report: dict = None
+    with open(latest_path, 'r') as file:
+        report = json.load(file)
+    user_id = report['userID']
+    sync_stableapproach_user_path = os.path.join(sync_stableapproach_path, user_id)
+    os.makedirs(sync_stableapproach_user_path, exist_ok=True) 
+    filename = os.path.basename(latest_path)
+    shutil.copyfile(latest_path, 
+                    os.path.join(sync_stableapproach_user_path, filename))
 
 def deserialize(file: str):
     parsed_db = {}
@@ -115,11 +136,10 @@ def export_airframe(db: dict, airframe: dict):
     shared_airframe["state"] = shared_states_dict
 
     # export states to be shared
-    try:
-        reg_path = os.path.join(sync_path, reg)
-        os.makedirs(reg_path, exist_ok=True) 
-        aircraft_file = os.path.join(reg_path, f"{int(time.time())}.tar")
-        tar = tarfile.open(aircraft_file, "w")
+    reg_path = os.path.join(sync_airframes_path, reg)
+    os.makedirs(reg_path, exist_ok=True) 
+    aircraft_file = os.path.join(reg_path, f"{int(time.time())}.tar")
+    with tarfile.open(aircraft_file, "w") as tar:
         # add db
         db_bin = bytes(serialize(shared_airframe), "utf-8")
         db_file = io.BytesIO(db_bin)
@@ -139,9 +159,6 @@ def export_airframe(db: dict, airframe: dict):
             name = state["name"]
             state_path=os.path.join(airframe_states_path, name)
             tar.add(state_path, arcname=os.path.join("states", name))
-    finally: 
-        # make sure file is saved
-        tar.close()
 
 def export_save(db: dict):
     airframes: dict = db["airframe"]
@@ -205,8 +222,8 @@ def import_save(local_db: dict):
         sorted_files = sorted(os.listdir(reg_path))
         return os.path.join(reg_path, sorted_files[-1])
     reg_paths = [
-        get_latest(os.path.join(sync_path, filename))
-        for filename in os.listdir(sync_path)
+        get_latest(os.path.join(sync_airframes_path, filename))
+        for filename in os.listdir(sync_airframes_path)
         if filename in aircrafts_to_be_synced
     ]
     for tar_path in reg_paths:
@@ -218,6 +235,8 @@ if __name__ == "__main__":
     option = input("[E]xport or [I]mport?").lower()
     if option == "e":
         export_save(db)
+        export_FDR()
+        export_stableapproach()
     elif option == "i":
         import_save(db)
     else:
