@@ -28,16 +28,23 @@ db_diff_filename = "airframe.diff"
 airframes_path = os.path.join(simulator_path, "Output", "CL650", "airframes")
 airframe_db_path = os.path.join(airframes_path, "airframe.db")
 aircraft_FDR_path = os.path.join(simulator_path, "Output", "CL650", "FDR")
+aircraft_HLIS_path = os.path.join(simulator_path, "Output", "CL650", "HLIS")
 stable_approach_reports_path = os.path.join(simulator_path, "Output", "preferences", "StableApproach", "reports")
 
 sync_airframes_path = os.path.join(sync_path, "airframes")
 sync_fdr_path = os.path.join(sync_path, "records", "FDR")
+sync_HLIS_path = os.path.join(sync_path, "records", "HLIS")
 sync_stableapproach_path = os.path.join(sync_path, "records", "StableApproach")
 
 def export_FDR():
     fdr_export_path = os.path.join(sync_fdr_path, f"{int(time.time())}.tar")
     with tarfile.open(fdr_export_path, 'w') as tar:
         tar.add(aircraft_FDR_path, arcname="")
+
+def export_HLIS():
+    hlis_export_path = os.path.join(sync_HLIS_path, f"{int(time.time())}.tar")
+    with tarfile.open(hlis_export_path, 'w') as tar:
+        tar.add(aircraft_HLIS_path, arcname="")
 
 def export_stableapproach():
     if not os.path.isdir(stable_approach_reports_path):
@@ -236,6 +243,7 @@ if __name__ == "__main__":
     if option == "e":
         export_save(db)
         export_FDR()
+        export_HLIS()
         export_stableapproach()
     elif option == "i":
         import_save(db)
