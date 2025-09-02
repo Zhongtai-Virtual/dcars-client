@@ -131,7 +131,7 @@ def export_airframe(db: dict, airframe: dict):
         # export NVRAM
         avionics_nvram_path = os.path.join(airframe_path, "avionics", "nvram")
         tar.add(avionics_nvram_path, arcname=os.path.join("avionics", "nvram"))
-        abus_nvram_path = os.path.join(airframes_path, "abus", "nvram")
+        abus_nvram_path = os.path.join(airframe_path, "abus", "nvram")
         tar.add(abus_nvram_path, arcname=os.path.join("abus", "nvram"))
 
         # FIXME: only dict works here, the list seems to be empty
