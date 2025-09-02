@@ -25,7 +25,17 @@ except KeyError:
 
 airframes_path = os.path.join(simulator_path, "Output", "CL650", "airframes")
 airframe_db_path = os.path.join(airframes_path, "airframe.db")
+aircraft_FDR_path = os.path.join(simulator_path, "Output", "CL650", "FDR")
+stable_approach_reports_path = os.path.join(simulator_path, "Output", "preferences", "StableApproach", "reports")
 db_diff_filename = "airframe.diff"
+
+def export_FDR():
+    # TODO:
+    return
+
+def export_stableapproach():
+    # TODO:
+    return
 
 def deserialize(file: str):
     parsed_db = {}
@@ -62,7 +72,8 @@ def serialize(db: dict):
 def export_airframe(db: dict, airframe: dict):
     reg = airframe["reg"]
     uuid = airframe["uuid"]
-    airframe_states_path = os.path.join(airframes_path, uuid, "states")
+    airframe_path = os.path.join(airframes_path, uuid)
+    airframe_states_path = os.path.join(airframe_path, "states")
 
     states: dict = airframe["state"]
     banned_prefixes = ["local", "(autosave)", "<latest state>"]
@@ -117,17 +128,17 @@ def export_airframe(db: dict, airframe: dict):
         tar.addfile(tarinfo=tarinfo, fileobj=db_file)
 
         # add fs
+        # export NVRAM
+        avionics_nvram_path = os.path.join(airframe_path, "avionics", "nvram")
+        tar.add(avionics_nvram_path, arcname=os.path.join("avionics", "nvram"))
+        abus_nvram_path = os.path.join(airframes_path, "abus", "nvram")
+        tar.add(abus_nvram_path, arcname=os.path.join("abus", "nvram"))
+
         # FIXME: only dict works here, the list seems to be empty
         for state in shared_states_dict.values():
             name = state["name"]
             state_path=os.path.join(airframe_states_path, name)
             tar.add(state_path, arcname=os.path.join("states", name))
-        
-        # import NVRAM
-        avionics_nvram_path = os.path.join(airframes_path, "avionics", "nvram")
-        tar.add(avionics_nvram_path, arcname=os.path.join("avionics", "nvram"))
-        abus_nvram_path = os.path.join(airframes_path, "abus", "nvram")
-        tar.add(abus_nvram_path, arcname=os.path.join("abus", "nvram"))
     finally: 
         # make sure file is saved
         tar.close()
