@@ -23,7 +23,6 @@ import pathlib
 import configparser
 import json
 
-    
 CLIENT_ID = 'HV8vsMU3NzbbH3oG1iY5V7xnbHHoVcxJIq8FbOUP'
 SCOPE = 'openid nextcloud offline_access'
 CALLBACK_URL = 'http://127.0.0.1'
