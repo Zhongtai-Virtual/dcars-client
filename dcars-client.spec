@@ -6,7 +6,26 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('config.ini.sample', '.')],
-    hiddenimports=[],
+    hiddenimports=[
+        # Core libraries
+        'keyring',
+        'authlib',
+        'httpx',
+        
+        # Keyring Backends (Crucial for cross-platform EXE)
+        'keyring.backends.Windows',      # For Windows Credential Locker
+        'keyring.backends.macOS',        # For macOS Keychain
+        'keyring.backends.SecretService', # For Linux (Gnome/Libsecret)
+        'keyring.backends.kwallet',      # For Linux (KDE)
+        
+        # Authlib/HTTPX internals
+        'authlib.integrations.httpx_client',
+        'authlib.common.security',
+        
+        # WebDAV internals
+        'webdav3',
+        'webdav3.client',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
