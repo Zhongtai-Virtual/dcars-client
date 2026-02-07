@@ -106,12 +106,11 @@ def make_handler(app):
 
 def get_slim_token(token):
     return {
-        'access_token': token.get('access_token'),
         'refresh_token': token.get('refresh_token'),
         'token_type': token.get('token_type'),
         'expires_at': token.get('expires_at')
     }
-
+    
 def make_token_updater(app):
     async def update_token_in_keyring(token, refresh_token=None, access_token=None):
         sub = app.sub
