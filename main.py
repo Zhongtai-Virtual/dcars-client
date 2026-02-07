@@ -1,16 +1,8 @@
 import asyncio
-import keyring
 import json
 import webbrowser
 import httpx
 import socket
-from authlib.integrations.httpx_client import AsyncOAuth2Client
-from authlib.common.security import generate_token
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from webdav3.client import Client as WebDavClient
-from pathlib import PurePath, Path
-from urllib.parse import urlparse, urljoin
-import posixpath
 import os
 import io
 import sys
@@ -22,6 +14,25 @@ import copy
 import pathlib
 import configparser
 import json
+import keyring
+from authlib.integrations.httpx_client import AsyncOAuth2Client
+from authlib.common.security import generate_token
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from webdav3.client import Client as WebDavClient
+from pathlib import PurePath, Path
+from urllib.parse import urlparse, urljoin
+import posixpath
+
+if hasattr(sys, "frozen"):
+    if sys.platform.startswith("win"):
+        import keyring.backends.Windows
+        keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
+    elif sys.platform.startswith("darwin"):
+        import keyring.backends.macOS
+        keyring.set_keyring(keyring.backends.macOS.Keyring())
+    else:
+        import keyring.backends.SecretService
+        keyring.set_keyring(keyring.backends.SecretService.Keyring())
 
 CLIENT_ID = 'HV8vsMU3NzbbH3oG1iY5V7xnbHHoVcxJIq8FbOUP'
 SCOPE = 'openid nextcloud offline_access'
