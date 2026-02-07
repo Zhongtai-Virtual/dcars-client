@@ -101,8 +101,16 @@ def make_handler(app):
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            self.wfile.write(b"Login successful! You can close self window.")
+            self.wfile.write(b"Login successful! You can close this window.")
     return CallbackHandler
+
+def get_slim_token(token):
+    return {
+        'access_token': token.get('access_token'),
+        'refresh_token': token.get('refresh_token'),
+        'token_type': token.get('token_type'),
+        'expires_at': token.get('expires_at')
+    }
 
 def make_token_updater(app):
     async def update_token_in_keyring(token, refresh_token=None, access_token=None):
@@ -110,7 +118,7 @@ def make_token_updater(app):
         if not sub:
             print("This should be impossible")
             return
-        keyring.set_password(APP_ID, sub, json.dumps(token))
+        keyring.set_password(APP_ID, sub, json.dumps(get_slim_token(token)))
         if app.webdav_client:
             app.webdav_client.session.headers.update({
                 "Authorization": f"Bearer {token['access_token']}"
