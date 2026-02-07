@@ -1,8 +1,13 @@
 [simulator]
+; for POSIX-Compliant environments
+; like macOS, BSD, and Linux, it should be like
+; path = /path/to/folder
+;
+; for Windows (if you unfortunately have to use that pathetic OS), it should be like
+; path = C:\path\to\x-plane-folderi:x
 path = XP12 folder
 
 [sync]
-path = [Nextcloud syncing path]/MZT
 ; comma delimited list of registration
 ; numbers for the aircrafts to be synced
 ; e.g. B-603L,B-604L
