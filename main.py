@@ -23,17 +23,6 @@ from pathlib import PurePath, Path
 from urllib.parse import urlparse, urljoin
 import posixpath
 
-#if hasattr(sys, "frozen"):
-#    if sys.platform.startswith("win"):
-#        import keyring.backends.Windows
-#        keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
-#    elif sys.platform.startswith("darwin"):
-#        import keyring.backends.macOS
-#        keyring.set_keyring(keyring.backends.macOS.Keyring())
-#    else:
-#        import keyring.backends.SecretService
-#        keyring.set_keyring(keyring.backends.SecretService.Keyring())
-
 CLIENT_ID = 'HV8vsMU3NzbbH3oG1iY5V7xnbHHoVcxJIq8FbOUP'
 SCOPE = 'openid nextcloud offline_access'
 CALLBACK_URL = 'http://127.0.0.1'
