@@ -110,7 +110,7 @@ def get_slim_token(token):
         'token_type': token.get('token_type'),
         'expires_at': token.get('expires_at')
     }
-    
+
 def make_token_updater(app):
     async def update_token_in_keyring(token, refresh_token=None, access_token=None):
         sub = app.sub
@@ -142,19 +142,19 @@ class App:
 
     async def export_FDR(self):
         fdr_export_path = posixpath.join(sync_fdr_path, f"{int(time.time())}.tar")
-        temp_file = tempfile.NamedTemporaryFile()
-        with tarfile.open(temp_file.name, 'w') as tar:
-            tar.add(aircraft_FDR_path, arcname="")
-        # TODO: async this
-        self.webdav_client.upload(fdr_export_path, temp_file.name)
+        with tempfile.NamedTemporaryFile(delete_on_close=False) as temp_file:
+            with tarfile.open(temp_file.name, 'w') as tar:
+                tar.add(aircraft_FDR_path, arcname="")
+            # TODO: async this
+            self.webdav_client.upload(fdr_export_path, temp_file.name)
 
     async def export_HLIS(self):
         hlis_export_path = posixpath.join(sync_HLIS_path, f"{int(time.time())}.tar")
-        temp_file = tempfile.NamedTemporaryFile()
-        with tarfile.open(temp_file.name, 'w') as tar:
-            tar.add(aircraft_HLIS_path, arcname="")
-        # TODO: async this
-        self.webdav_client.upload(hlis_export_path, temp_file.name)
+        with tempfile.NamedTemporaryFile(delete_on_close=False) as temp_file:
+            with tarfile.open(temp_file.name, 'w') as tar:
+                tar.add(aircraft_HLIS_path, arcname="")
+            # TODO: async this
+            self.webdav_client.upload(hlis_export_path, temp_file.name)
 
     async def export_stableapproach(self):
         if not os.path.isdir(stable_approach_reports_path):
@@ -226,29 +226,29 @@ class App:
         #os.makedirs(reg_path, exist_ok=True) 
         self.webdav_client.mkdir(reg_path)
         aircraft_file_path = posixpath.join(reg_path, f"{int(time.time())}.tar")
-        temp_file = tempfile.NamedTemporaryFile()
-        with tarfile.open(temp_file.name, "w") as tar:
-            # add db
-            db_bin = bytes(serialize(shared_airframe), "utf-8")
-            db_file = io.BytesIO(db_bin)
-            tarinfo = tarfile.TarInfo(db_diff_filename)
-            tarinfo.size = len(db_bin)
-            tar.addfile(tarinfo=tarinfo, fileobj=db_file)
+        with tempfile.NamedTemporaryFile(delete_on_close=False) as temp_file:
+            with tarfile.open(temp_file.name, "w") as tar:
+                # add db
+                db_bin = bytes(serialize(shared_airframe), "utf-8")
+                db_file = io.BytesIO(db_bin)
+                tarinfo = tarfile.TarInfo(db_diff_filename)
+                tarinfo.size = len(db_bin)
+                tar.addfile(tarinfo=tarinfo, fileobj=db_file)
+    
+                # add fs
+                # export NVRAM
+                avionics_nvram_path = os.path.join(airframe_path, "avionics", "nvram")
+                tar.add(avionics_nvram_path, arcname=os.path.join("avionics", "nvram"))
+                abus_nvram_path = os.path.join(airframe_path, "abus", "nvram")
+                tar.add(abus_nvram_path, arcname=os.path.join("abus", "nvram"))
 
-            # add fs
-            # export NVRAM
-            avionics_nvram_path = os.path.join(airframe_path, "avionics", "nvram")
-            tar.add(avionics_nvram_path, arcname=os.path.join("avionics", "nvram"))
-            abus_nvram_path = os.path.join(airframe_path, "abus", "nvram")
-            tar.add(abus_nvram_path, arcname=os.path.join("abus", "nvram"))
-
-            # FIXME: only dict works here, the list seems to be empty
-            for state in shared_states_dict.values():
-                name = state["name"]
-                state_path=os.path.join(airframe_states_path, name)
-                tar.add(state_path, arcname=os.path.join("states", name))
+                # FIXME: only dict works here, the list seems to be empty
+                for state in shared_states_dict.values():
+                    name = state["name"]
+                    state_path=os.path.join(airframe_states_path, name)
+                    tar.add(state_path, arcname=os.path.join("states", name))
         # TODO: async this
-        self.webdav_client.upload(aircraft_file_path, temp_file.name)
+            self.webdav_client.upload(aircraft_file_path, temp_file.name)
 
     async def export_save(self, db: dict):
         airframes: dict = db["airframe"]
@@ -257,58 +257,58 @@ class App:
             await self.export_airframe(db, airframe)
 
     async def import_airframe(self, local_db: dict, tar_path: str):
-        temp_file = tempfile.NamedTemporaryFile()
-        # TODO: async
-        self.webdav_client.download(tar_path, temp_file.name)
-        with tarfile.open(temp_file.name, "r") as tar:
-            # merge db
-            diff = tar.extractfile(db_diff_filename)
-            txt = diff.read().decode("utf-8")
-            remote_diff: dict = deserialize(txt)
+        with tempfile.NamedTemporaryFile(delete_on_close=False) as temp_file:
+            # TODO: async
+            self.webdav_client.download(tar_path, temp_file.name)
+            with tarfile.open(temp_file.name, "r") as tar:
+                # merge db
+                diff = tar.extractfile(db_diff_filename)
+                txt = diff.read().decode("utf-8")
+                remote_diff: dict = deserialize(txt)
 
-            local_airframes = local_db["airframe"]
-            local_airframe, *_ = [
-                local_airframes[i] for i in local_airframes.keys() 
-                if local_airframes[i]["reg"] == remote_diff["reg"]
-            ]
+                local_airframes = local_db["airframe"]
+                local_airframe, *_ = [
+                    local_airframes[i] for i in local_airframes.keys() 
+                    if local_airframes[i]["reg"] == remote_diff["reg"]
+                ]
 
-            reg = local_airframe["reg"]
-            uuid = local_airframe["uuid"]
-            airframe_path = os.path.join(airframes_path, uuid)
-            for key in ["placard", "selcal", "msn"]:
-                local_airframe[key] = remote_diff[key]
-            # merge states
-            local_state = local_airframe["state"]
-            remote_state: dict = remote_diff["state"]
-            state_names = set()
-            merged_states = []
-            for s in remote_state.values():
-                merged_states.append(s)
-                state_names.add(s["name"])
-            for s in local_state.values():
-                name: str = s["name"]
-                if name not in state_names:
-                    # ensure latest state is always index 0
-                    if name.startswith("<latest state>"):
-                        merged_states.insert(0, s)
-                    else:
-                        merged_states.append(s)
-            merged_states = zip(range(len(merged_states)), merged_states)
-            merged_states_dict = {}
-            for i, s in merged_states:
-                merged_states_dict[str(i)] = s
-            local_airframe["state"] = merged_states_dict
-            
-            data = bytes(serialize(local_db), "utf-8")
-            with open(airframe_db_path, "wb") as db_file:
-                db_file.write(data)
+                reg = local_airframe["reg"]
+                uuid = local_airframe["uuid"]
+                airframe_path = os.path.join(airframes_path, uuid)
+                for key in ["placard", "selcal", "msn"]:
+                    local_airframe[key] = remote_diff[key]
+                # merge states
+                local_state = local_airframe["state"]
+                remote_state: dict = remote_diff["state"]
+                state_names = set()
+                merged_states = []
+                for s in remote_state.values():
+                    merged_states.append(s)
+                    state_names.add(s["name"])
+                for s in local_state.values():
+                    name: str = s["name"]
+                    if name not in state_names:
+                        # ensure latest state is always index 0
+                        if name.startswith("<latest state>"):
+                            merged_states.insert(0, s)
+                        else:
+                            merged_states.append(s)
+                merged_states = zip(range(len(merged_states)), merged_states)
+                merged_states_dict = {}
+                for i, s in merged_states:
+                    merged_states_dict[str(i)] = s
+                local_airframe["state"] = merged_states_dict
+                
+                data = bytes(serialize(local_db), "utf-8")
+                with open(airframe_db_path, "wb") as db_file:
+                    db_file.write(data)
 
-            # move states
-            subdir_and_files = [
-                tarinfo for tarinfo in tar.getmembers()
-                if tarinfo.name != ("airframe.diff")
-            ]
-            tar.extractall(members=subdir_and_files, filter='data', path=airframe_path)
+                # move states
+                subdir_and_files = [
+                    tarinfo for tarinfo in tar.getmembers()
+                    if tarinfo.name != ("airframe.diff")
+                ]
+                tar.extractall(members=subdir_and_files, filter='data', path=airframe_path)
 
     async def import_save(self, local_db: dict):
         def get_base_dir(input_url):
