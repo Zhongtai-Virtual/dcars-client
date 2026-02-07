@@ -13,6 +13,7 @@ jobs:
           spec: 'dcars-client.spec'
           python_ver: '3.13'
           upload_exe_with_name: "dcars-client-lin_x86-64"
+          requirements: 'requirements.txt'
           options:
 
   build-windows:
@@ -24,6 +25,7 @@ jobs:
           spec: 'dcars-client.spec'
           python_ver: '3.13'
           upload_exe_with_name: "dcars-client-win_x86-64"
+          requirements: 'requirements.txt'
           options: 
 
   build-macos:
@@ -35,4 +37,5 @@ jobs:
           spec: 'dcars-client.spec'
           python_ver: '3.13'
           upload_exe_with_name: "dcars-client-macos_aarch64"
+          requirements: 'requirements.txt'
           options: 
