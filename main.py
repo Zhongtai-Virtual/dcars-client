@@ -37,6 +37,10 @@ sync_path = "/"
 
 try:
     simulator_path = config['simulator']['path']
+    if not Path(simulator_path).is_dir():
+        print(f"Invalid simulator path.")
+        # TODO: better error handling
+        raise KeyError()
     aircrafts_to_be_synced = config['sync']['regs'].split(",")
 except KeyError:
     if not Path(config_file_path).is_file():
@@ -408,7 +412,6 @@ async def main():
         print("Invalid input")
         input()
         sys.exit(1)
-    await app.testwebdav()
     #await app.logout()
 
 if __name__ == "__main__":
