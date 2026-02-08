@@ -1,5 +1,4 @@
 import asyncio
-import json
 import webbrowser
 import httpx
 import socket
@@ -400,26 +399,34 @@ class App:
                 webbrowser.open(OPENID_CONF['end_session_endpoint'])
 
 async def main():
-    option = input("[E]xport or [I]mport?").lower()
-
+    option = input("[E]xport, [I]mport, or Load Public [T]raning Scenarios?").lower()
+    app = App()
     with open(airframe_db_path, "r") as file:
         db = deserialize(file.read())
 
-    app = App()
-    await app.login()
-    # FIXME: check and refresh token before each webdav call
-    if option == "e":
-        await app.export_save(db)
-        await app.export_FDR()
-        await app.export_HLIS()
-        await app.export_stableapproach()
-    elif option == "i":
+    if option == "t":
+        options = {
+         'webdav_hostname': f"https://mzt.app/dav/",
+         'disable_check': True
+        }
+        app.webdav_client = WebDavClient(options)
+        aircrafts_to_be_synced = ["DLLM"]
         await app.import_save(db)
     else:
-        print("Invalid input")
-        input()
-        sys.exit(1)
-    #await app.logout()
+        await app.login()
+        # FIXME: check and refresh token before each webdav call
+        if option == "e":
+            await app.export_save(db)
+            await app.export_FDR()
+            await app.export_HLIS()
+            await app.export_stableapproach()
+        elif option == "i":
+            await app.import_save(db)
+        else:
+            print("Invalid input")
+            input()
+            sys.exit(1)
 
 if __name__ == "__main__":
     asyncio.run(main())
+    input("Done; Press any key to close this window.")
