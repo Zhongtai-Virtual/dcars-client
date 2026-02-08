@@ -421,8 +421,8 @@ Press [Enter] to continue ONLY when the above is met.
                 webbrowser.open(OPENID_CONF['end_session_endpoint'])
 
 async def main():
-    option = input("[E]xport, [I]mport, or Load Public [T]raning Scenarios?").lower()
     app = App()
+    option = input("[E]xport, [I]mport, or Load Public [T]raining Scenarios?").lower()
     if option == "t":
         options = {
          'webdav_hostname': f"https://mzt.app/dav/",
