@@ -1,10 +1,10 @@
 [simulator]
 ; for POSIX-Compliant environments
 ; like macOS, BSD, and Linux, it should be like
-; path = /path/to/folder
+; path = /path/to/x-plane/folder
 ;
 ; for Windows (if you unfortunately have to use that pathetic OS), it should be like
-; path = C:\path\to\x-plane-folderi:x
+; path = C:\path\to\x-plane\folder
 path = XP12 folder
 
 [sync]
