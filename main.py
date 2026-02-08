@@ -182,20 +182,29 @@ class App:
         airframe_states_path = os.path.join(airframe_path, "states")
 
         states: dict = airframe["state"]
-        banned_prefixes = ["local", "(autosave)", "<latest state>"]
+        protected_prefixes = ["local", "(autosave)", "<latest state>", "train"]
+        local_prefixes = ["local", "(autosave)", "<latest state>"]
         shared_states: list = [
             states[i] for i in states.keys() 
             if not any([
-                states[i]["name"].startswith(prefix) for prefix in banned_prefixes
+                states[i]["name"].startswith(prefix) 
+                for prefix in local_prefixes
             ])
         ]
-        states_to_be_cleaned = sorted(shared_states, key=lambda item: item["created"])
+        states_to_be_cleaned = [
+            # only clean shared states -- protected is implied by local
+            state for state in sorted(shared_states, key=lambda item: item["created"])
+            if not any([
+                state["name"].startswith(prefix) 
+                for prefix in protected_prefixes
+            ])
+        ]
         # reserve the last five
         states_to_be_cleaned = states_to_be_cleaned[:-5]
         if states_to_be_cleaned:
-            local_only = [state["name"] for state in states_to_be_cleaned]
-            print(f"Removing outdated states that are not marked as local-only: {local_only}")
-            input("Press [enter] to proceed")
+            names_to_be_cleaned = [state["name"] for state in states_to_be_cleaned]
+            print(f"Removing outdated states for {reg} that are not marked as protected: {names_to_be_cleaned}")
+            input("Press [Enter] to proceed, or close this program if you do not want to remove them.")
         # clean from fs
         for state_to_be_cleaned in states_to_be_cleaned:
             path_to_be_cleaned = os.path.join(airframe_states_path, state_to_be_cleaned["name"])
@@ -207,6 +216,7 @@ class App:
         airframe["state"] = new_state_dict
         for i, s in new_states:
             new_state_dict[str(i)] = s
+        # TODO: do we really need to write db for evevry airframe?
         data = bytes(serialize(db), "utf-8")
         with open(airframe_db_path, "wb") as db_file:
             db_file.write(data)
@@ -310,11 +320,13 @@ class App:
                 tar.extractall(members=subdir_and_files, filter='data', path=airframe_path)
 
     async def import_save(self, local_db: dict):
-        input("""
+        input(
+"""=========================WARNING===========================
 Please make sure HS CL60 is NOT LOADED in career mode. 
 That is, either you are NOT RUNNING HS CL60,
 OR HS CL60 is in non-persistent or network guest mode.
-Press [Enter] to continue ONLY when the above is met.""")
+Press [Enter] to continue ONLY when the above is met.
+===========================================================""")
         def get_base_dir(input_url):
             parsed_url = urlparse(input_url)
             path = parsed_url.path
@@ -380,6 +392,7 @@ Press [Enter] to continue ONLY when the above is met.""")
             authorization_url, state = self.oauth_client.create_authorization_url(authorization_endpoint, code_verifier=code_verifier)
             handler = make_handler(self)
             server = HTTPServer(('127.0.0.1', port), handler)
+            print("Log into your mzt.app account from the browser window opened.")
             webbrowser.open(authorization_url)
             server.handle_request()
             server.server_close()
@@ -438,4 +451,6 @@ and then press [Enter] to start the upload.
 
 if __name__ == "__main__":
     asyncio.run(main())
-    input("Done; Press any key to close this window.")
+    input(
+"""Done; You may need to reload the aircraft to see changes (if any). 
+Press any key to close this window.""")
