@@ -121,7 +121,7 @@ def make_token_updater(app):
             app.webdav_client.session.headers.update({
                 "Authorization": f"Bearer {token['access_token']}"
             })
-        print("Token refreshed and WebDAV headers updated!")
+        #print("Token refreshed and WebDAV headers updated!")
     return update_token_in_keyring
 
 def find_free_port():
@@ -310,6 +310,11 @@ class App:
                 tar.extractall(members=subdir_and_files, filter='data', path=airframe_path)
 
     async def import_save(self, local_db: dict):
+        input("""
+Please make sure HS CL60 is NOT LOADED in career mode. 
+That is, either you are NOT RUNNING HS CL60,
+OR HS CL60 is in non-persistent or network guest mode.
+Press [Enter] to continue ONLY when the above is met.""")
         def get_base_dir(input_url):
             parsed_url = urlparse(input_url)
             path = parsed_url.path
@@ -416,6 +421,10 @@ async def main():
         await app.login()
         # FIXME: check and refresh token before each webdav call
         if option == "e":
+            input("""
+Save your current state in HS CL60 airframe manager,
+and then press [Enter] to start the upload.
+""")
             await app.export_save(db)
             await app.export_FDR()
             await app.export_HLIS()
