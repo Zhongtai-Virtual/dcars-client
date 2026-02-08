@@ -27,39 +27,9 @@ SCOPE = 'openid nextcloud offline_access'
 CALLBACK_URL = 'http://127.0.0.1'
 APP_ID = "app.mzt.dcars-client"
 OPENID_CONF = httpx.get("https://sso.mzt.app/application/o/dcars-client/.well-known/openid-configuration").json()
+PROTECTED_PREFIXES = ["local", "(autosave)", "<latest state>", "train"]
+LOCAL_PREFIXES = ["local", "(autosave)", "<latest state>"]
 
-script_dir = pathlib.Path(__file__).parent.absolute()
-config_file_path = os.path.join(script_dir, "config.ini")
-config = configparser.ConfigParser()
-config.read(config_file_path)
-sync_path = "/"
-
-try:
-    simulator_path = config['simulator']['path']
-    if not Path(simulator_path).is_dir():
-        print(f"Invalid simulator path.")
-        # TODO: better error handling
-        raise KeyError()
-    aircrafts_to_be_synced = config['sync']['regs'].split(",")
-except KeyError:
-    if not Path(config_file_path).is_file():
-        shutil.copy(os.path.join(script_dir, "config.ini.sample"), config_file_path)
-    print("Invalid config.")
-    print(f"Please edit your config file at {config_file_path}")
-    input()
-    sys.exit(1)
-
-db_diff_filename = "airframe.diff"
-airframes_path = os.path.join(simulator_path, "Output", "CL650", "airframes")
-airframe_db_path = os.path.join(airframes_path, "airframe.db")
-aircraft_FDR_path = os.path.join(simulator_path, "Output", "CL650", "FDR")
-aircraft_HLIS_path = os.path.join(simulator_path, "Output", "CL650", "HLIS")
-stable_approach_reports_path = os.path.join(simulator_path, "Output", "preferences", "StableApproach", "reports")
-
-sync_airframes_path = posixpath.join(sync_path, "airframes")
-sync_fdr_path = posixpath.join(sync_path, "records", "FDR")
-sync_HLIS_path = posixpath.join(sync_path, "records", "HLIS")
-sync_stableapproach_path = posixpath.join(sync_path, "records", "StableApproach")
 
 def deserialize(file: str):
     parsed_db = {}
@@ -134,61 +104,94 @@ def find_free_port():
 class App:
 
     def __init__(self):
+        script_dir = pathlib.Path(__file__).parent.absolute()
+        config_file_path = os.path.join(script_dir, "config.ini")
+        config = configparser.ConfigParser()
+        config.read(config_file_path)
+
+        try:
+            self.simulator_path = config['simulator']['path']
+            if not Path(self.simulator_path).is_dir():
+                print(f"Invalid simulator path.")
+                # TODO: better error handling
+                raise KeyError()
+            self.aircrafts_to_be_synced = config['sync']['regs'].split(",")
+        except KeyError:
+            if not Path(config_file_path).is_file():
+                shutil.copy(os.path.join(script_dir, "config.ini.sample"), config_file_path)
+            print("Invalid config.")
+            print(f"Please edit your config file at {config_file_path}")
+            input()
+            sys.exit(1)
+
         self.oauth_client = None
         self.webdav_client = None
         self.sub = None
 
+        self.db_diff_filename = "airframe.diff"
+        self.airframes_path = os.path.join(self.simulator_path, "Output", "CL650", "airframes")
+        self.airframe_db_path = os.path.join(self.airframes_path, "airframe.db")
+        self.aircraft_FDR_path = os.path.join(self.simulator_path, "Output", "CL650", "FDR")
+        self.aircraft_HLIS_path = os.path.join(self.simulator_path, "Output", "CL650", "HLIS")
+        self.stable_approach_reports_path = os.path.join(self.simulator_path, "Output", "preferences", "StableApproach", "reports")
+
+        self.sync_path = "/"
+        self.sync_airframes_path = posixpath.join(self.sync_path, "airframes")
+        self.sync_fdr_path = posixpath.join(self.sync_path, "records", "FDR")
+        self.sync_HLIS_path = posixpath.join(self.sync_path, "records", "HLIS")
+        self.sync_stableapproach_path = posixpath.join(self.sync_path, "records", "StableApproach")
+
+        with open(self.airframe_db_path, "r") as file:
+            self.db = deserialize(file.read())
 
     async def export_FDR(self):
-        fdr_export_path = posixpath.join(sync_fdr_path, f"{int(time.time())}.tar")
+        fdr_export_path = posixpath.join(self.sync_fdr_path, f"{int(time.time())}.tar")
         with tempfile.NamedTemporaryFile(delete_on_close=False) as temp_file:
             with tarfile.open(temp_file.name, 'w') as tar:
-                tar.add(aircraft_FDR_path, arcname="")
+                tar.add(self.aircraft_FDR_path, arcname="")
             # TODO: async this
             self.webdav_client.upload(fdr_export_path, temp_file.name)
 
     async def export_HLIS(self):
-        hlis_export_path = posixpath.join(sync_HLIS_path, f"{int(time.time())}.tar")
+        hlis_export_path = posixpath.join(self.sync_HLIS_path, f"{int(time.time())}.tar")
         with tempfile.NamedTemporaryFile(delete_on_close=False) as temp_file:
             with tarfile.open(temp_file.name, 'w') as tar:
-                tar.add(aircraft_HLIS_path, arcname="")
+                tar.add(self.aircraft_HLIS_path, arcname="")
             # TODO: async this
             self.webdav_client.upload(hlis_export_path, temp_file.name)
 
     async def export_stableapproach(self):
-        if not os.path.isdir(stable_approach_reports_path):
+        if not os.path.isdir(self.stable_approach_reports_path):
             print("Stable Approach not installed")
             return
         reports = [
-            os.path.join(stable_approach_reports_path, r)
-            for r in os.listdir(stable_approach_reports_path)
+            os.path.join(self.stable_approach_reports_path, r)
+            for r in os.listdir(self.stable_approach_reports_path)
         ]
         latest_path = max(reports, key=os.path.getctime)
         report: dict = None
         with open(latest_path, 'r') as file:
             report = json.load(file)
         user_id = report['userID']
-        sync_stableapproach_user_path = posixpath.join(sync_stableapproach_path, user_id)
-        self.webdav_client.mkdir(sync_stableapproach_user_path)
+        self.sync_stableapproach_user_path = posixpath.join(self.sync_stableapproach_path, user_id)
+        self.webdav_client.mkdir(self.sync_stableapproach_user_path)
         filename = os.path.basename(latest_path)
-        remote_path = posixpath.join(sync_stableapproach_user_path, filename)
+        remote_path = posixpath.join(self.sync_stableapproach_user_path, filename)
         # TODO: async this
         self.webdav_client.upload(remote_path, latest_path)
 
-    async def export_airframe(self, db: dict, airframe: dict):
+    async def export_airframe(self, airframe: dict):
         reg = airframe["reg"]
         uuid = airframe["uuid"]
-        airframe_path = os.path.join(airframes_path, uuid)
-        airframe_states_path = os.path.join(airframe_path, "states")
+        self.airframe_path = os.path.join(self.airframes_path, uuid)
+        airframe_states_path = os.path.join(self.airframe_path, "states")
 
         states: dict = airframe["state"]
-        protected_prefixes = ["local", "(autosave)", "<latest state>", "train"]
-        local_prefixes = ["local", "(autosave)", "<latest state>"]
         shared_states: list = [
             states[i] for i in states.keys() 
             if not any([
                 states[i]["name"].startswith(prefix) 
-                for prefix in local_prefixes
+                for prefix in LOCAL_PREFIXES
             ])
         ]
         states_to_be_cleaned = [
@@ -196,7 +199,7 @@ class App:
             state for state in sorted(shared_states, key=lambda item: item["created"])
             if not any([
                 state["name"].startswith(prefix) 
-                for prefix in protected_prefixes
+                for prefix in PROTECTED_PREFIXES
             ])
         ]
         # reserve the last five
@@ -217,8 +220,8 @@ class App:
         for i, s in new_states:
             new_state_dict[str(i)] = s
         # TODO: do we really need to write db for evevry airframe?
-        data = bytes(serialize(db), "utf-8")
-        with open(airframe_db_path, "wb") as db_file:
+        data = bytes(serialize(self.db), "utf-8")
+        with open(self.airframe_db_path, "wb") as db_file:
             db_file.write(data)
 
         # clean from sharing
@@ -231,7 +234,7 @@ class App:
         shared_airframe["state"] = shared_states_dict
 
         # export states to be shared
-        reg_path = posixpath.join(sync_airframes_path, reg)
+        reg_path = posixpath.join(self.sync_airframes_path, reg)
         #os.makedirs(reg_path, exist_ok=True) 
         self.webdav_client.mkdir(reg_path)
         aircraft_file_path = posixpath.join(reg_path, f"{int(time.time())}.tar")
@@ -240,38 +243,38 @@ class App:
                 # add db
                 db_bin = bytes(serialize(shared_airframe), "utf-8")
                 db_file = io.BytesIO(db_bin)
-                tarinfo = tarfile.TarInfo(db_diff_filename)
+                tarinfo = tarfile.TarInfo(self.db_diff_filename)
                 tarinfo.size = len(db_bin)
                 tar.addfile(tarinfo=tarinfo, fileobj=db_file)
     
                 # add fs
                 # export NVRAM
-                avionics_nvram_path = os.path.join(airframe_path, "avionics", "nvram")
+                avionics_nvram_path = os.path.join(self.airframe_path, "avionics", "nvram")
                 tar.add(avionics_nvram_path, arcname=os.path.join("avionics", "nvram"))
-                abus_nvram_path = os.path.join(airframe_path, "abus", "nvram")
+                abus_nvram_path = os.path.join(self.airframe_path, "abus", "nvram")
                 tar.add(abus_nvram_path, arcname=os.path.join("abus", "nvram"))
-
                 # FIXME: only dict works here, the list seems to be empty
                 for state in shared_states_dict.values():
                     name = state["name"]
                     state_path=os.path.join(airframe_states_path, name)
                     tar.add(state_path, arcname=os.path.join("states", name))
-        # TODO: async this
+            # TODO: async this
             self.webdav_client.upload(aircraft_file_path, temp_file.name)
 
-    async def export_save(self, db: dict):
-        airframes: dict = db["airframe"]
-        airframes = [airframes[i] for i in airframes.keys() if airframes[i]["reg"] in aircrafts_to_be_synced]
+    async def export_save(self):
+        airframes: dict = self.db["airframe"]
+        airframes = [airframes[i] for i in airframes.keys() if airframes[i]["reg"] in self.aircrafts_to_be_synced]
         for airframe in airframes:
-            await self.export_airframe(db, airframe)
+            await self.export_airframe(airframe)
 
-    async def import_airframe(self, local_db: dict, tar_path: str):
+    async def import_airframe(self, tar_path: str):
         with tempfile.NamedTemporaryFile(delete_on_close=False) as temp_file:
+            local_db = self.db
             # TODO: async
             self.webdav_client.download(tar_path, temp_file.name)
             with tarfile.open(temp_file.name, "r") as tar:
                 # merge db
-                diff = tar.extractfile(db_diff_filename)
+                diff = tar.extractfile(self.db_diff_filename)
                 txt = diff.read().decode("utf-8")
                 remote_diff: dict = deserialize(txt)
 
@@ -283,7 +286,7 @@ class App:
 
                 reg = local_airframe["reg"]
                 uuid = local_airframe["uuid"]
-                airframe_path = os.path.join(airframes_path, uuid)
+                airframe_path = os.path.join(self.airframes_path, uuid)
                 for key in ["placard", "selcal", "msn"]:
                     local_airframe[key] = remote_diff[key]
                 # merge states
@@ -309,7 +312,7 @@ class App:
                 local_airframe["state"] = merged_states_dict
                 
                 data = bytes(serialize(local_db), "utf-8")
-                with open(airframe_db_path, "wb") as db_file:
+                with open(self.airframe_db_path, "wb") as db_file:
                     db_file.write(data)
 
                 # move states
@@ -319,7 +322,7 @@ class App:
                 ]
                 tar.extractall(members=subdir_and_files, filter='data', path=airframe_path)
 
-    async def import_save(self, local_db: dict):
+    async def import_save(self):
         input(
 """=========================WARNING===========================
 Please make sure HS CL60 is NOT LOADED in career mode. 
@@ -327,6 +330,7 @@ That is, either you are NOT RUNNING HS CL60,
 OR HS CL60 is in non-persistent or network guest mode.
 Press [Enter] to continue ONLY when the above is met.
 ===========================================================""")
+        print("Starting import")
         def get_base_dir(input_url):
             parsed_url = urlparse(input_url)
             path = parsed_url.path
@@ -342,14 +346,14 @@ Press [Enter] to continue ONLY when the above is met.
         def check_to_be_synced(file_metadata):
             path = file_metadata['path']
             reg = get_base_dir(path)
-            return reg in aircrafts_to_be_synced
+            return reg in self.aircrafts_to_be_synced
         reg_paths = [
-            get_latest(posixpath.join(sync_airframes_path, get_base_dir(file['path'])))
-            for file in self.webdav_client.list(sync_airframes_path, get_info=True)
+            get_latest(posixpath.join(self.sync_airframes_path, get_base_dir(file['path'])))
+            for file in self.webdav_client.list(self.sync_airframes_path, get_info=True)
             if check_to_be_synced(file)
         ]
         for tar_path in reg_paths:
-            await self.import_airframe(local_db, tar_path)
+            await self.import_airframe(tar_path)
 
 
     def retrieve_credentials(self):
@@ -419,22 +423,20 @@ Press [Enter] to continue ONLY when the above is met.
 async def main():
     option = input("[E]xport, [I]mport, or Load Public [T]raning Scenarios?").lower()
     app = App()
-    with open(airframe_db_path, "r") as file:
-        db = deserialize(file.read())
-
     if option == "t":
         options = {
          'webdav_hostname': f"https://mzt.app/dav/",
          'disable_check': True
         }
         app.webdav_client = WebDavClient(options)
-        aircrafts_to_be_synced = ["DLLM"]
+        # override config regs
+        app.aircrafts_to_be_synced = ["DLLM"]
         input("""
 Please create an airframe with the exact registration "DLLM"
 -- no dashes, no quotation marks
-and then press [Enter] to proceed.
+and then press [Enter] to start the download.
 """)
-        await app.import_save(db)
+        await app.import_save()
     else:
         await app.login()
         # FIXME: check and refresh token before each webdav call
@@ -443,12 +445,13 @@ and then press [Enter] to proceed.
 Save your current state in HS CL60 airframe manager,
 and then press [Enter] to start the upload.
 """)
-            await app.export_save(db)
+            print("Starting export")
+            await app.export_save()
             await app.export_FDR()
             await app.export_HLIS()
             await app.export_stableapproach()
         elif option == "i":
-            await app.import_save(db)
+            await app.import_save()
         else:
             print("Invalid input")
             input()
