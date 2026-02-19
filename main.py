@@ -14,6 +14,7 @@ import pathlib
 import configparser
 import json
 import keyring
+import secrets
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.common.security import generate_token
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -296,13 +297,37 @@ class App:
                 txt = diff.read().decode("utf-8")
                 remote_diff: dict = deserialize(txt)
 
-                local_airframes = local_db["airframe"]
-                local_airframe, *_ = [
-                    local_airframes[i] for i in local_airframes.keys() 
-                    if local_airframes[i]["reg"] == remote_diff["reg"]
-                ]
+                local_airframes: list[dict] = local_db["airframe"]
+                reg = remote_diff["reg"]
 
-                reg = local_airframe["reg"]
+                try:
+                    local_airframe, *_ = [
+                        local_airframes[i] for i in local_airframes.keys() 
+                        if local_airframes[i]["reg"] == reg
+                    ]
+                except ValueError:
+                    # initialize reg w/ fake data
+                    i = len(local_airframes)
+                    local_airframe = {
+                        "reg": reg,
+                        "uuid": secrets.token_hex(12),
+                        "livery": "",
+                        "state": {
+                            "0": {
+                                "created": f"{int(time.time())}",
+                                "ias": "0",
+                                "mach": "0",
+                                "name": "<latest state>",
+                                "on_gnd": "true",
+                                "parked": "true",
+                                "version": "v1.8"
+                            }
+                        },
+                    }
+                    local_airframes[i] = local_airframe
+
+
+                #reg = local_airframe["reg"]
                 uuid = local_airframe["uuid"]
                 airframe_path = os.path.join(self.airframes_path, uuid)
                 for key in ["placard", "selcal", "msn"]:
