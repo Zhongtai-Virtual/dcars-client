@@ -32,9 +32,10 @@ pydantic_core==2.41.5
 pyinstaller==6.18.0
 pyinstaller-hooks-contrib==2026.0
 pyjwkest==1.4.4
-PyQt5==5.15.11
-PyQt5-Qt5==5.15.18
 PyQt5_sip==12.18.0
+PyQt6==6.10.2
+PyQt6-Qt6==6.10.2
+PyQt6_sip==13.11.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 python-openid==2.2.5

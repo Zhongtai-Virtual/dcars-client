@@ -21,7 +21,7 @@ from webdav3.client import Client as WebDavClient
 from pathlib import PurePath, Path
 from urllib.parse import urlparse, urljoin
 import posixpath
-from PyQt5.QtWidgets import QApplication, QFileDialog
+from PyQt6.QtWidgets import QApplication, QFileDialog
 
 CLIENT_ID = 'HV8vsMU3NzbbH3oG1iY5V7xnbHHoVcxJIq8FbOUP'
 SCOPE = 'openid nextcloud offline_access'
