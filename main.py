@@ -21,6 +21,7 @@ from webdav3.client import Client as WebDavClient
 from pathlib import PurePath, Path
 from urllib.parse import urlparse, urljoin
 import posixpath
+from PyQt5.QtWidgets import QApplication, QFileDialog
 
 CLIENT_ID = 'HV8vsMU3NzbbH3oG1iY5V7xnbHHoVcxJIq8FbOUP'
 SCOPE = 'openid nextcloud offline_access'
@@ -109,20 +110,37 @@ class App:
         config = configparser.ConfigParser()
         config.read(config_file_path)
 
-        try:
-            self.simulator_path = config['simulator']['path']
-            if not Path(self.simulator_path).is_dir():
-                print(f"Invalid simulator path.")
-                # TODO: better error handling
-                raise KeyError()
-            self.aircrafts_to_be_synced = config['sync']['regs'].split(",")
-        except KeyError:
-            if not Path(config_file_path).is_file():
-                shutil.copy(os.path.join(script_dir, "config.ini.sample"), config_file_path)
-            print("Invalid config.")
-            print(f"Please edit your config file at {config_file_path}")
-            input()
-            sys.exit(1)
+        while True:
+            try:
+                self.simulator_path = config['simulator']['path']
+
+                if not Path(os.path.join(self.simulator_path, "Output", "CL650", "airframes")).is_dir():
+                    print(f"Invalid simulator path.")
+                    # TODO: better error handling
+                    raise KeyError()
+                self.aircrafts_to_be_synced = config['sync']['regs'].split(",")
+                break
+            except KeyError:
+                if not Path(config_file_path).is_file():
+                    shutil.copy(os.path.join(script_dir, "config.ini.sample"), config_file_path)
+                    config.read(config_file_path)
+                else:
+                    print("Your current X-Plane path does not seem to have a CL60 installation")
+
+                # Create a Qt Application
+
+                print("Please select your X-Plane root directory (the folder that directly contains X-Plane application).")
+                # Directory picker
+                directory = QFileDialog.getExistingDirectory(
+                    caption="Select your X-Plane Directory"
+                )
+                print(f"Directory {directory} is saved")
+                config['simulator']['path'] = directory
+
+                with open(config_file_path, 'w') as file:
+                    config.write(file)
+
+
 
         self.oauth_client = None
         self.webdav_client = None
@@ -206,7 +224,7 @@ class App:
         states_to_be_cleaned = states_to_be_cleaned[:-5]
         if states_to_be_cleaned:
             names_to_be_cleaned = [state["name"] for state in states_to_be_cleaned]
-            print(f"Removing outdated states for {reg} that are not marked as protected: {names_to_be_cleaned}")
+            print(f"Removing from local storage the outdated states of {reg} that are not marked as protected: {names_to_be_cleaned}")
             input("Press [Enter] to proceed, or close this program if you do not want to remove them.")
         # clean from fs
         for state_to_be_cleaned in states_to_be_cleaned:
@@ -421,6 +439,7 @@ Press [Enter] to continue ONLY when the above is met.
                 webbrowser.open(OPENID_CONF['end_session_endpoint'])
 
 async def main():
+    qt_app = QApplication(sys.argv)
     app = App()
     option = input("[E]xport, [I]mport, or Load Public [T]raining Scenarios?").lower()
     if option == "t":
