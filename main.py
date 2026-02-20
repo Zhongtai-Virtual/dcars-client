@@ -475,11 +475,6 @@ async def main():
         app.webdav_client = WebDavClient(options)
         # override config regs
         app.aircrafts_to_be_synced = ["DLLM"]
-        input("""
-Please create an airframe with the exact registration "DLLM"
--- no dashes, no quotation marks
-and then press [Enter] to start the download.
-""")
         await app.import_save()
     else:
         await app.login()
